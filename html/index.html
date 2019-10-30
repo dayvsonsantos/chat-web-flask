@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Bate Papo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        section#home {
+            display: grid;
+            height: 100vh;
+            align-items: center;
+            text-align: center;
+        }
+
+        section#batepapo {
+            display: none;
+            grid-template-rows: 1fr min-content;
+            height: 100vh;
+        }
+
+        section#batepapo form {
+            display: grid;
+            grid-template-columns: 1fr min-content;
+            padding: 10px;
+            background: #999;
+        }
+
+        section#batepapo button {
+            padding: 5px 15px;
+        }
+
+        section#batepapo input {
+            padding: 5px;
+        }
+
+        div #mensagens {
+            overflow: auto;
+            word-wrap: breake-word;
+        }
+
+        div#mensagens p {
+            margin: 5px;
+            padding: 10px;
+            background: #CCC;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <section id="home">
+        <form>
+
+            <label>Seu nome: <input id="nome" placeholder="Digite seu nome" required /> </label>
+            <button>Entrar</button>
+
+        </form>
+    </section>
+    <section id="batepapo">
+        <div id="mensagens">
+        </div>
+
+        <form>
+            <input type="text" id="mensagem" placeholder="Digite sua mensagem">
+            <button>Enviar</button>
+        </form>
+    </section>
+</body>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js"
+    integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+<script type="text/javascript" src="https://cdn.rawgit.com/ricmoo/aes-js/e27b99df/index.js"></script>
+<script>
+
+    var inome = document.querySelector("#nome");
+    var imensagem = document.querySelector("#mensagem");
+    var homeform = document.querySelector("#home form");
+    var chatform = document.querySelector('#batepapo form');
+    var msgdiv = document.querySelector("#mensagens");
+    // An example 128-bit key (16 bytes * 8 bits/byte = 128 bits)
+    var key = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+
+    function getRandomInt(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
+    console.log(getRandomInt(1, 5))
+
+    function decrypt(encryptedBytes) {
+        // When ready to decrypt the hex string, convert it back to bytes
+        var encryptedBytes = aesjs.utils.hex.toBytes(encryptedHex);
+
+        // The counter mode of operation maintains internal state, so to
+        // decrypt a new instance must be instantiated.
+        var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
+        var decryptedBytes = aesCtr.decrypt(encryptedBytes);
+
+        // Convert our bytes back into text
+        var decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+        console.log(decryptedText);
+        // "Text may be any length you wish, no padding is required."
+
+        return decryptedText;
+    }
+
+
+    function mensagemhtml(name, msg) {
+        return '<p><strong>' + name + ': </strong>' + msg + '</p>';
+
+    }
+    var socket = io();
+
+    socket.on('message', function (data) {
+
+        msgdiv.innerHTML += mensagemhtml(data.name, data.message);
+    });
+
+
+    homeform.addEventListener('submit', function (ev) {
+        document.querySelector('#home').style.display = 'none';
+        document.querySelector('#batepapo').style.display = 'grid';
+        ev.preventDefault();
+    })
+
+    function encrypt(text_) {
+
+        // Convert text to bytes
+        var text = text_;
+        var textBytes = aesjs.utils.utf8.toBytes(text);
+        console.log(textBytes)
+
+        // The counter is optional, and if omitted will begin at 1
+        var aesCtr = new aesjs.ModeOfOperation.ctr(key, new aesjs.Counter(5));
+        var encryptedBytes = aesCtr.encrypt(textBytes);
+
+        // To print or store the binary data, you may convert it to hex
+        var encryptedHex = aesjs.utils.hex.fromBytes(encryptedBytes);
+        console.log(encryptedHex);
+
+        return encryptedHex
+    }
+
+
+
+    chatform.addEventListener('submit', function (ev) {
+        var _message = encrypt(imensagem.value)
+        console.log(_message);
+        socket.emit('message', {
+            name: inome.value,
+            //message: imensagem.value
+            message: _message,
+            key: key
+        });
+        ev.preventDefault();
+    })
+
+
+    encrypt("hello world");
+</script>
+
+</html>
